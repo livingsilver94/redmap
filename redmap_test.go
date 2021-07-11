@@ -7,6 +7,10 @@ import (
 	"github.com/livingsilver94/redmap"
 )
 
+type stringer struct{ s string }
+
+func (s stringer) String() string { return s.s }
+
 func TestInvalidType(t *testing.T) {
 	types := []interface{}{
 		*new(func(int)),
@@ -53,6 +57,9 @@ func TestMarshalScalar(t *testing.T) {
 		{In: float64(123.456), Out: map[string]string{"1": "123.456"}},
 		{In: complex64(123.456 + 789.012i), Out: map[string]string{"1": "(123.456+789.012i)"}},
 		{In: complex128(123.456 + 789.012i), Out: map[string]string{"1": "(123.456+789.012i)"}},
+		{In: "test", Out: map[string]string{"1": "test"}},
+		{In: true, Out: map[string]string{"1": "true"}},
+		// TODO: test fmt.Stringer.
 	}
 	for repeat := 0; repeat < 2; repeat++ {
 		for i, ts := range tests {
