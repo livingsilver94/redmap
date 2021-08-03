@@ -13,39 +13,27 @@ func Marshal(v interface{}) (map[string]string, error) {
 	if isNil(val) {
 		return nil, nil
 	}
-	return marshal(val), nil
+	return nil, nil
 }
 
 func isValidType(val reflect.Value) bool {
-	switch val.Kind() {
-	case reflect.Func, reflect.Chan:
-		return false
-	default:
-		return true
+	k := val.Kind()
+	if k == reflect.Interface || k == reflect.Ptr {
+		return isValidType(val.Elem())
 	}
+	// reflect.Invalid is a valid type because it's the zero value of interface{}.
+	return k == reflect.Struct || k == reflect.Invalid
 }
 
 func isNil(val reflect.Value) bool {
 	if !val.IsValid() {
-		// This is a nil value.
+		// This is the zero value of interface{}, so it's a nil.
 		return true
 	}
 	switch val.Kind() {
-	case reflect.Ptr, reflect.Slice, reflect.Map:
+	case reflect.Interface, reflect.Ptr:
 		return val.IsNil()
 	default:
 		return false
 	}
-}
-
-func marshal(val reflect.Value) map[string]string {
-	switch val.Kind() {
-	case reflect.Ptr, reflect.Interface:
-		return marshal(val.Elem())
-	case reflect.Array, reflect.Slice:
-	case reflect.Struct:
-	default:
-		return map[string]string{"1": scalarToString(val)}
-	}
-	return nil
 }
