@@ -1,15 +1,26 @@
 package redmap_test
 
 import (
+	"encoding"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/livingsilver94/redmap"
 )
 
+const (
+	stringerOut      = "stub"
+	textMarshalerOut = "stubtext"
+)
+
 type Stub struct{}
 
-func (s Stub) String() string { return "stub" }
+func (s Stub) String() string { return stringerOut }
+
+type StubTextMarshaler struct{}
+
+func (s StubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
 
 func TestValidType(t *testing.T) {
 	var (
@@ -38,6 +49,40 @@ func TestMarshalNil(t *testing.T) {
 	for _, n := range nils {
 		if res, err := redmap.Marshal(n); res != nil || err != nil {
 			t.Fatalf("Marshal() with nil value of type %T must return nil", n)
+		}
+	}
+}
+
+func TestMarshalScalars(t *testing.T) {
+	tests := []struct {
+		In  interface{}
+		Out map[string]string
+	}{
+		{In: struct{ V bool }{true}, Out: map[string]string{"V": "true"}},
+		{In: struct{ V int }{100}, Out: map[string]string{"V": "100"}},
+		{In: struct{ V uint }{100}, Out: map[string]string{"V": "100"}},
+		{In: struct{ V float32 }{100.1}, Out: map[string]string{"V": "100.1"}},
+		{In: struct{ V float64 }{100.1}, Out: map[string]string{"V": "100.1"}},
+		{In: struct{ V complex64 }{100.1 + 80.1i}, Out: map[string]string{"V": "(100.1+80.1i)"}},
+		{In: struct{ V complex128 }{100.1 + 80.1i}, Out: map[string]string{"V": "(100.1+80.1i)"}},
+		{In: struct{ V string }{"str"}, Out: map[string]string{"V": "str"}},
+
+		// Marshal interfaces by passing the real value.
+		{In: struct{ V Stub }{Stub{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V StubTextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
+
+		// Marshal interfaces by interfaces.
+		{In: struct{ V fmt.Stringer }{Stub{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V encoding.TextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
+	}
+	for i, test := range tests {
+		t.Log(i)
+		out, err := redmap.Marshal(test.In)
+		if err != nil {
+			t.Fatalf("Marshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(out, test.Out) {
+			t.Fatalf("Marshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, out)
 		}
 	}
 }

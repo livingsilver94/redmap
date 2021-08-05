@@ -9,6 +9,8 @@ import (
 
 func scalartoString(val reflect.Value) (string, error) {
 	switch val.Kind() {
+	case reflect.Ptr:
+		return scalartoString(val.Elem())
 	case reflect.Bool:
 		return strconv.FormatBool(val.Bool()), nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -25,15 +27,15 @@ func scalartoString(val reflect.Value) (string, error) {
 		return strconv.FormatComplex(val.Complex(), 'f', -1, 128), nil
 	case reflect.String:
 		return val.String(), nil
-	case reflect.Struct:
+	case reflect.Interface, reflect.Struct:
 		typ := val.Type()
-		if typ.Implements(reflect.TypeOf(encoding.TextMarshaler(nil))) {
+		if typ.Implements(reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()) {
 			str, err := val.Interface().(encoding.TextMarshaler).MarshalText()
 			return string(str), err
 		}
-		if typ.Implements(reflect.TypeOf(fmt.Stringer(nil))) {
+		if typ.Implements(reflect.TypeOf((*fmt.Stringer)(nil)).Elem()) {
 			return val.Interface().(fmt.Stringer).String(), nil
 		}
 	}
-	panic(fmt.Sprintf("%s doesn't implement TextMarshaler or Stringer", val.Type().String()))
+	return "", fmt.Errorf("%s doesn't implement TextMarshaler or Stringer", val.Type())
 }
