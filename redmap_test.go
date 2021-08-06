@@ -86,3 +86,26 @@ func TestMarshalScalars(t *testing.T) {
 		}
 	}
 }
+
+func TestStructTags(t *testing.T) {
+	stru := struct {
+		DefaultName string
+		Renamed     string `redmap:"customname"`
+		Ignored     string `redmap:"-"`
+	}{
+		DefaultName: "defaultname",
+		Renamed:     "renamed",
+		Ignored:     "ignored",
+	}
+	expected := map[string]string{
+		"DefaultName": "defaultname",
+		"customname":  "renamed",
+	}
+	out, err := redmap.Marshal(stru)
+	if err != nil {
+		t.Fatalf("Marshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("Marshal's output doesn't respect struct tags\n\tExpected: %v\n\tOut: %v", expected, out)
+	}
+}
