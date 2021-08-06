@@ -33,6 +33,11 @@ func marshal(val reflect.Value) (map[string]string, error) {
 	ret := make(map[string]string, typ.NumField())
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
+		if field.PkgPath != "" {
+			// We don't want to marshal unexported fields. PkgPath is empty for exported fields.
+			// TODO: In Go 1.17, use field.IsExported().
+			continue
+		}
 		tags, ok := redmapTags(field.Tag)
 		if tags.ignored {
 			continue

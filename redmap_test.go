@@ -87,6 +87,26 @@ func TestMarshalScalars(t *testing.T) {
 	}
 }
 
+func TestUnexported(t *testing.T) {
+	stru := struct {
+		Exported   string
+		unexported string
+	}{
+		Exported:   "exported",
+		unexported: "should be invisible",
+	}
+	expected := map[string]string{
+		"Exported": "exported",
+	}
+	out, err := redmap.Marshal(stru)
+	if err != nil {
+		t.Fatalf("Marshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatal("Marshal's output includes an unexported struct field")
+	}
+}
+
 func TestStructTags(t *testing.T) {
 	stru := struct {
 		DefaultName string
