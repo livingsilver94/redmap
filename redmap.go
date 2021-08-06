@@ -5,10 +5,10 @@ import (
 	"reflect"
 )
 
-func Marshal(v interface{}) (map[string]string, error) {
-	valid, val := isValidType(reflect.ValueOf(v))
-	if !valid {
-		return nil, fmt.Errorf("cannot marshal type %T", v)
+func Marshal(stru interface{}) (map[string]string, error) {
+	isStru, val := isStruct(reflect.ValueOf(stru))
+	if !isStru {
+		return nil, fmt.Errorf("cannot marshal type %T", stru)
 	}
 	if !val.IsValid() {
 		// v is nil, so return a nil map.
@@ -17,22 +17,18 @@ func Marshal(v interface{}) (map[string]string, error) {
 	return marshal(val)
 }
 
-// isValidType returns whether val is a valid struct to unmarshal.
-// The returned values are a boolean flag telling whether the value is valid,
-// and the actual valid value in the case the original argument was buried under layers of interfaces or pointers.
-func isValidType(val reflect.Value) (bool, reflect.Value) {
+// isStruct returns whether val is a struct. Along with the boolean flag, isStruct also returns
+// the actual struct value in the case the original argument was buried under layers of interfaces or pointers.
+func isStruct(val reflect.Value) (bool, reflect.Value) {
 	k := val.Kind()
 	if k == reflect.Interface || k == reflect.Ptr {
-		return isValidType(val.Elem())
+		return isStruct(val.Elem())
 	}
 	// reflect.Invalid is a valid type because it's the zero value of interface{}.
 	return k == reflect.Struct || k == reflect.Invalid, val
 }
 
 func marshal(val reflect.Value) (map[string]string, error) {
-	if k := val.Kind(); k == reflect.Ptr || k == reflect.Interface {
-		return marshal(val.Elem())
-	}
 	typ := val.Type()
 	ret := make(map[string]string, typ.NumField())
 	for i := 0; i < typ.NumField(); i++ {
