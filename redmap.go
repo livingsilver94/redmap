@@ -39,13 +39,14 @@ func marshal(val reflect.Value) (map[string]string, error) {
 			continue
 		}
 		tags, ok := redmapTags(field.Tag)
-		if tags.ignored {
+		valField := val.Field(i)
+		if tags.ignored || (tags.omitempty && valField.IsZero()) {
 			continue
 		}
 		if !ok {
 			tags.name = field.Name
 		}
-		str, err := scalartoString(val.Field(i))
+		str, err := fieldToString(valField)
 		if err != nil {
 			return ret, err
 		}

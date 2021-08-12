@@ -7,10 +7,10 @@ import (
 	"strconv"
 )
 
-func scalartoString(val reflect.Value) (string, error) {
+func fieldToString(val reflect.Value) (string, error) {
 	switch val.Kind() {
 	case reflect.Ptr:
-		return scalartoString(val.Elem())
+		return fieldToString(val.Elem())
 	case reflect.Bool:
 		return strconv.FormatBool(val.Bool()), nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
