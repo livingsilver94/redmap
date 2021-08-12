@@ -109,10 +109,11 @@ func TestUnexported(t *testing.T) {
 
 func TestStructTags(t *testing.T) {
 	stru := struct {
-		DefaultName string
-		Renamed     string `redmap:"customname"`
-		Ignored     string `redmap:"-"`
-		Omitted     string `redmap:",omitempty"`
+		DefaultName      string
+		Renamed          string      `redmap:"customname"`
+		Ignored          string      `redmap:"-"`
+		OmittedString    string      `redmap:",omitempty"`
+		OmittedInterface interface{} `redmap:",omitempty"`
 	}{
 		DefaultName: "defaultname",
 		Renamed:     "renamed",
