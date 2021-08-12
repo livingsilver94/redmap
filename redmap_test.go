@@ -112,6 +112,7 @@ func TestStructTags(t *testing.T) {
 		DefaultName string
 		Renamed     string `redmap:"customname"`
 		Ignored     string `redmap:"-"`
+		Omitted     string `redmap:",omitempty"`
 	}{
 		DefaultName: "defaultname",
 		Renamed:     "renamed",

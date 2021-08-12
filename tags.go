@@ -9,14 +9,16 @@ const (
 	tagKeyword   = "redmap"
 	tagSeparator = ","
 
-	tagIgnore = "-"
-	tagInline = "inline"
+	tagIgnore    = "-"
+	tagInline    = "inline"
+	tagOmitEmpty = "omitempty"
 )
 
 type structTags struct {
-	name    string
-	ignored bool
-	inline  bool
+	name      string
+	ignored   bool
+	inline    bool
+	omitempty bool
 }
 
 func redmapTags(t reflect.StructTag) (structTags, bool) {
@@ -28,14 +30,15 @@ func redmapTags(t reflect.StructTag) (structTags, bool) {
 	if str == tagIgnore {
 		return structTags{ignored: true}, true
 	}
-	tokens := strings.Split(str, tagSeparator)
-	tags := structTags{}
-	for _, t := range tokens {
+
+	toks := strings.Split(str, tagSeparator)
+	tags := structTags{name: toks[0]}
+	for _, t := range toks[1:] {
 		switch t {
 		case tagInline:
 			tags.inline = true
-		default:
-			tags.name = t
+		case tagOmitEmpty:
+			tags.omitempty = true
 		}
 	}
 	return tags, true
