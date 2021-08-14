@@ -22,7 +22,7 @@ type StubTextMarshaler struct{}
 
 func (s StubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
 
-func TestValidType(t *testing.T) {
+func TestMarshalValidType(t *testing.T) {
 	var (
 		stub Stub         = Stub{}
 		ifac fmt.Stringer = stub
@@ -87,7 +87,11 @@ func TestMarshalScalars(t *testing.T) {
 	}
 }
 
-func TestUnexported(t *testing.T) {
+func TestMarshalInnerStructs(t *testing.T) {
+
+}
+
+func TestMarshalUnexported(t *testing.T) {
 	stru := struct {
 		Exported   string
 		unexported string
@@ -107,7 +111,7 @@ func TestUnexported(t *testing.T) {
 	}
 }
 
-func TestStructTags(t *testing.T) {
+func TestMarshalWithTags(t *testing.T) {
 	stru := struct {
 		DefaultName      string
 		Renamed          string      `redmap:"customname"`
