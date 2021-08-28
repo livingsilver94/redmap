@@ -52,18 +52,19 @@ func marshalRecurse(mp map[string]string, prefix string, stru reflect.Value) err
 		if tags.ignored || (tags.omitempty && value.IsZero()) {
 			continue
 		}
-		if !ok {
+		if !ok || tags.name == "" {
 			tags.name = field.Name
 		}
 
-		for kind := value.Kind(); kind == reflect.Ptr; {
+		for value.Kind() == reflect.Ptr {
 			value = value.Elem()
 		}
+
 		if tags.inline {
 			if kind := value.Kind(); kind != reflect.Struct {
 				return fmt.Errorf("cannot inline %s. Only structs are allowed", kind)
 			}
-			err := marshalRecurse(mp, tags.name+inlineSep, value)
+			err := marshalRecurse(mp, prefix+tags.name+inlineSep, value)
 			if err != nil {
 				return err
 			}

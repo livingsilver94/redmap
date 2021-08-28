@@ -14,9 +14,9 @@ const (
 	textMarshalerOut = "stubtext"
 )
 
-type Stub struct{}
+type StubStringer struct{}
 
-func (s Stub) String() string { return stringerOut }
+func (s StubStringer) String() string { return stringerOut }
 
 type StubTextMarshaler struct{}
 
@@ -24,7 +24,7 @@ func (s StubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMar
 
 func TestMarshalValidType(t *testing.T) {
 	var (
-		stub Stub         = Stub{}
+		stub StubStringer = StubStringer{}
 		ifac fmt.Stringer = stub
 	)
 	types := []interface{}{
@@ -42,8 +42,8 @@ func TestMarshalValidType(t *testing.T) {
 
 func TestMarshalNil(t *testing.T) {
 	var (
-		stub *Stub        = nil
-		ifac fmt.Stringer = stub
+		stub *StubStringer = nil
+		ifac fmt.Stringer  = stub
 	)
 	nils := []interface{}{nil, stub, ifac}
 	for _, n := range nils {
@@ -68,15 +68,14 @@ func TestMarshalScalars(t *testing.T) {
 		{In: struct{ V string }{"str"}, Out: map[string]string{"V": "str"}},
 
 		// Marshal interfaces by passing the real value.
-		{In: struct{ V Stub }{Stub{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V StubStringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
 		{In: struct{ V StubTextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 
 		// Marshal interfaces by interfaces.
-		{In: struct{ V fmt.Stringer }{Stub{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V fmt.Stringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
 		{In: struct{ V encoding.TextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 	}
-	for i, test := range tests {
-		t.Log(i)
+	for _, test := range tests {
 		out, err := redmap.Marshal(test.In)
 		if err != nil {
 			t.Fatalf("Marshal returned unexpected error %q", err)
@@ -88,7 +87,40 @@ func TestMarshalScalars(t *testing.T) {
 }
 
 func TestMarshalInnerStructs(t *testing.T) {
-
+	type (
+		Inner1Level = struct {
+			String string
+		}
+		Inner2Level = struct {
+			Inner Inner1Level `redmap:",inline"`
+		}
+		Root1Level = struct {
+			Inner Inner1Level `redmap:",inline"`
+		}
+		Root2Level = struct {
+			Inner Inner2Level `redmap:",inline"`
+		}
+		RootWithPointer = struct {
+			Inner *Inner1Level `redmap:",inline"`
+		}
+	)
+	tests := []struct {
+		In  interface{}
+		Out map[string]string
+	}{
+		{In: Root1Level{Inner: Inner1Level{String: "oneLevel"}}, Out: map[string]string{"Inner.String": "oneLevel"}},
+		{In: Root2Level{Inner: Inner2Level{Inner: Inner1Level{String: "twoLevel"}}}, Out: map[string]string{"Inner.Inner.String": "twoLevel"}},
+		{In: RootWithPointer{Inner: &Inner1Level{String: "oneLevel"}}, Out: map[string]string{"Inner.String": "oneLevel"}},
+	}
+	for _, test := range tests {
+		out, err := redmap.Marshal(test.In)
+		if err != nil {
+			t.Fatalf("Marshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(out, test.Out) {
+			t.Fatalf("Marshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, out)
+		}
+	}
 }
 
 func TestMarshalUnexported(t *testing.T) {
