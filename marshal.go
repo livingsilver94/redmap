@@ -9,29 +9,30 @@ import (
 
 const inlineSep = "."
 
-func Marshal(stru interface{}) (map[string]string, error) {
-	isStru, val := isStruct(reflect.ValueOf(stru))
-	if !isStru {
-		return nil, fmt.Errorf("cannot marshal type %T", stru)
+func Marshal(v interface{}) (map[string]string, error) {
+	val, err := structValue(v)
+	if err != nil {
+		return nil, err
 	}
-	if !val.IsValid() {
-		// v is nil, so return a nil map.
-		return nil, nil
-	}
-
 	ret := make(map[string]string)
 	return ret, marshalRecurse(ret, "", val)
 }
 
-// isStruct returns whether val is a struct. Along with the boolean flag, isStruct also returns
-// the actual struct value in the case the original argument was buried under layers of interfaces or pointers.
-func isStruct(val reflect.Value) (bool, reflect.Value) {
-	k := val.Kind()
-	if k == reflect.Interface || k == reflect.Ptr {
-		return isStruct(val.Elem())
+func structValue(v interface{}) (reflect.Value, error) {
+	val := reflect.ValueOf(v)
+	kin := val.Kind()
+	for kin == reflect.Interface || kin == reflect.Ptr {
+		val = val.Elem()
+		kin = val.Kind()
 	}
-	// reflect.Invalid is a valid type because it's the zero value of interface{}.
-	return k == reflect.Struct || k == reflect.Invalid, val
+	switch kin {
+	case reflect.Struct:
+		return val, nil
+	case reflect.Invalid:
+		return reflect.Value{}, ErrNilValue
+	default:
+		return reflect.Value{}, fmt.Errorf("invalid type %s: %w", val.Type(), ErrNonStruct)
+	}
 }
 
 // marshalRecurse marshal a struct represented by val into a map[string]string.

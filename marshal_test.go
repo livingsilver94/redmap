@@ -2,6 +2,7 @@ package redmap_test
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -47,8 +48,8 @@ func TestMarshalNil(t *testing.T) {
 	)
 	nils := []interface{}{nil, stub, ifac}
 	for _, n := range nils {
-		if res, err := redmap.Marshal(n); res != nil || err != nil {
-			t.Fatalf("Marshal() with nil value of type %T must return nil", n)
+		if _, err := redmap.Marshal(n); !errors.Is(err, redmap.ErrNilValue) {
+			t.Fatalf("Marshal() with nil value of type %T did not return error", n)
 		}
 	}
 }
