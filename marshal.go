@@ -31,7 +31,7 @@ func structValue(v interface{}) (reflect.Value, error) {
 	case reflect.Invalid:
 		return reflect.Value{}, ErrNilValue
 	default:
-		return reflect.Value{}, fmt.Errorf("invalid type %s: %w", val.Type(), ErrNonStruct)
+		return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
 	}
 }
 
@@ -63,7 +63,7 @@ func marshalRecurse(mp map[string]string, prefix string, stru reflect.Value) err
 
 		if tags.inline {
 			if kind := value.Kind(); kind != reflect.Struct {
-				return fmt.Errorf("cannot inline %s. Only structs are allowed", kind)
+				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNotStruct))
 			}
 			err := marshalRecurse(mp, prefix+tags.name+inlineSep, value)
 			if err != nil {
