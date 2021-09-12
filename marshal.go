@@ -48,12 +48,12 @@ func marshalRecurse(mp map[string]string, prefix string, stru reflect.Value) err
 			// TODO: In Go 1.17, use field.IsExported().
 			continue
 		}
-		tags, ok := redmapTags(field.Tag)
+		tags := redmapTags(field.Tag)
 		value := stru.Field(i)
 		if tags.ignored || (tags.omitempty && value.IsZero()) {
 			continue
 		}
-		if !ok || tags.name == "" {
+		if tags.name == "" {
 			tags.name = field.Name
 		}
 

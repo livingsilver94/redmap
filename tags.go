@@ -21,14 +21,14 @@ type structTags struct {
 	omitempty bool
 }
 
-func redmapTags(t reflect.StructTag) (structTags, bool) {
+func redmapTags(t reflect.StructTag) structTags {
 	str, has := t.Lookup(tagKeyword)
 	if !has || str == "" {
-		return structTags{}, false
+		return structTags{}
 	}
 
 	if str == tagIgnore {
-		return structTags{ignored: true}, true
+		return structTags{ignored: true}
 	}
 
 	toks := strings.Split(str, tagSeparator)
@@ -41,5 +41,5 @@ func redmapTags(t reflect.StructTag) (structTags, bool) {
 			tags.omitempty = true
 		}
 	}
-	return tags, true
+	return tags
 }
