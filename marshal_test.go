@@ -54,6 +54,17 @@ func TestMarshalNil(t *testing.T) {
 	}
 }
 
+func TestMarshalInvalidType(t *testing.T) {
+	noStruct := 45
+	tests := []interface{}{noStruct, &noStruct}
+	for _, test := range tests {
+		_, err := redmap.Marshal(test)
+		if !errors.Is(err, redmap.ErrNotStruct) {
+			t.Fatalf("Unmarshal returned error %q but %q was expected", err, redmap.ErrNotStruct)
+		}
+	}
+}
+
 func TestMarshalScalars(t *testing.T) {
 	tests := []struct {
 		In  interface{}

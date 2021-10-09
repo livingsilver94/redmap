@@ -18,7 +18,7 @@ func (s *StubTextUnmarshaler) UnmarshalText(text []byte) error {
 
 var emptyMap = make(map[string]string)
 
-func TestUnmarshalValid(t *testing.T) {
+func TestUnmarshalValidType(t *testing.T) {
 	tests := []interface{}{
 		StubStringer{},
 		&StubStringer{},
@@ -48,7 +48,7 @@ func TestUnmarshalNil(t *testing.T) {
 	}
 }
 
-func TestUnmarshalInvalid(t *testing.T) {
+func TestUnmarshalInvalidType(t *testing.T) {
 	tests := []struct {
 		val    func() reflect.Value
 		expErr error
