@@ -115,7 +115,7 @@ func TestUnmarshalScalars(t *testing.T) {
 	}
 }
 
-func TestUnarshalInnerStructs(t *testing.T) {
+func TestUnmarshalInnerStructs(t *testing.T) {
 	type (
 		Inner1Level = struct {
 			String string
@@ -181,5 +181,32 @@ func TestUnarshalUnexported(t *testing.T) {
 		if !reflect.DeepEqual(zero.Elem().Interface(), test.Out) {
 			t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", mp, test.Out, zero)
 		}
+	}
+}
+
+func TestUnmarshalWithTags(t *testing.T) {
+	expected := struct {
+		DefaultName   string
+		Renamed       string `redmap:"customname"`
+		Ignored       string `redmap:"-"`
+		OmittedString string `redmap:",omitempty"`
+	}{
+		DefaultName:   "defaultname",
+		Renamed:       "renamed",
+		Ignored:       "ignored",
+		OmittedString: "should not change",
+	}
+	mp := map[string]string{
+		"DefaultName": "defaultname",
+		"customname":  "renamed",
+		"Ignored":     "should be ignored",
+	}
+	copy := expected
+	err := redmap.Unmarshal(mp, &copy)
+	if err != nil {
+		t.Fatalf("Unmarshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(copy, expected) {
+		t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", mp, expected, copy)
 	}
 }
