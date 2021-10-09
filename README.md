@@ -24,25 +24,30 @@ When the download finishes, you'll find Redmap under the unsurprising name of `r
 
 ## Usage
 
-This example shows the simplest usage of Redmap. Usage of struct tags and unmarshaling pitfalls are better illustrated in the documentation.
+[This example](https://play.golang.org/p/CGo1P2k250S) shows the simplest usage of Redmap. Usage of struct tags and unmarshaling pitfalls are better illustrated in the documentation.
 
 ```go
 package main
 
-import github.com/livingsilver94/redmap
+import (
+	"fmt"
+	"github.com/livingsilver94/redmap"
+)
 
 type MyStruct struct {
-    AString string
-    AnInt   int
+	AString string
+	AnInt   int
 }
 
 func main() {
-    // Struct to map.
-    myS := MyStruct{AString: "universe", AnInt: 42}
-    mp, _ := redmap.Marshal(myS)
+	// Struct to map.
+	myS := MyStruct{AString: "universe", AnInt: 42}
+	mp, err := redmap.Marshal(myS)
+	fmt.Println(mp, err)
 
-    // Map to struct.
-    var mySIsBack MyStruct
-    redmap.Unmarshal(mp, &mySIsBack)
+	// Map to struct.
+	var mySIsBack MyStruct
+	redmap.Unmarshal(mp, &mySIsBack)
+	fmt.Println(mySIsBack, err)
 }
 ```
