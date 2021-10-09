@@ -9,10 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.15', '1.16', '1.17' ]
+        go: [ '1.16', '1.17' ]
       fail-fast: false
-    env:
-      GO111MODULE: on
     steps:
     - uses: actions/checkout@v2
     - name: Set up Go
