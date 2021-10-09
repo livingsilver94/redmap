@@ -9,6 +9,43 @@ import (
 
 const inlineSep = "."
 
+// Marshal returns the map[string]string representation of v, which must be a struct,
+// by reading every exported field and translating it into a (key, value) pair to be
+// added to the resulting map. Interfaces or pointers to struct are also accepted.
+//
+// Marshal converts all non-reference built-in types except arrays, plus
+// structs implementing encoding.TextMarshaler or fmt.Stringer, checked in this exact order.
+//
+// The encoding of each struct field can be customized by the format string stored under the "redmap"
+// key in the struct field's tag. The format string gives the name of the field, possibly followed by
+// a comma-separated list of options. The name may be empty in order to specify options without
+// overriding the default field name. If the format string is equal to "-", the struct field
+// is excluded from marshaling.
+//
+// Examples of struct field tags and their meanings:
+//
+//   // Field appears in the map as key "customName".
+//   Field int `redmap:"customName"`
+//
+//   // Field appears in the map as key "customName" and
+//   // the field is omitted from the map if its value
+//   // is empty as defined by the Go language.
+//   Field int `redmap:"customName,omitempty"`
+//
+//   // Field appears in the map as key "Field" (the default), but
+//   // the field is skipped if empty. Note the leading comma.
+//   Field int `redmap:",omitempty"`
+//
+//   // Field is ignored by this package.
+//   Field int `redmap:"-"`
+//
+//   // Field appears in the map as key "-".
+//   Field int `redmap:"-,"`
+//
+//   // Field must be a struct. Field is flattened and its fields
+//   // are added to the map as (key, value) pairs, where the keys
+//   // are constructed in the "customName.subFieldName" format.
+//   Field int `redmap:"customName,inline"`
 func Marshal(v interface{}) (map[string]string, error) {
 	val, err := structValue(v)
 	if err != nil {
