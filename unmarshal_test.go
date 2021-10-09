@@ -153,3 +153,33 @@ func TestUnarshalInnerStructs(t *testing.T) {
 		}
 	}
 }
+
+func TestUnarshalUnexported(t *testing.T) {
+	mp := map[string]string{"Exp": "atest"}
+	tests := []struct {
+		Out interface{}
+	}{
+		{Out: struct {
+			Exp   string
+			unexp string
+		}{Exp: "atest"}},
+		{Out: struct {
+			Exp   string
+			unexp *string
+		}{Exp: "atest"}},
+		{Out: struct {
+			Exp   string
+			unexp StubTextUnmarshaler
+		}{Exp: "atest"}},
+	}
+	for _, test := range tests {
+		zero := reflect.New(reflect.TypeOf(test.Out))
+		err := redmap.Unmarshal(mp, zero.Interface())
+		if err != nil {
+			t.Fatalf("Unmarshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(zero.Elem().Interface(), test.Out) {
+			t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", mp, test.Out, zero)
+		}
+	}
+}
