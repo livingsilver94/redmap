@@ -95,6 +95,7 @@ func TestMarshalInnerStructs(t *testing.T) {
 		Inner2Level = struct {
 			Inner Inner1Level `redmap:",inline"`
 		}
+
 		Root1Level = struct {
 			Inner Inner1Level `redmap:",inline"`
 		}

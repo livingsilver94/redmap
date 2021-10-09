@@ -114,3 +114,42 @@ func TestUnmarshalScalars(t *testing.T) {
 		}
 	}
 }
+
+func TestUnarshalInnerStructs(t *testing.T) {
+	type (
+		Inner1Level = struct {
+			String string
+		}
+		Inner2Level = struct {
+			Inner Inner1Level `redmap:",inline"`
+		}
+
+		Root1Level = struct {
+			Inner Inner1Level `redmap:",inline"`
+		}
+		Root2Level = struct {
+			Inner Inner2Level `redmap:",inline"`
+		}
+		RootWithPointer = struct {
+			Inner *Inner1Level `redmap:",inline"`
+		}
+	)
+	tests := []struct {
+		In  map[string]string
+		Out interface{}
+	}{
+		{In: map[string]string{"Inner.String": "oneLevel"}, Out: Root1Level{Inner: Inner1Level{String: "oneLevel"}}},
+		{In: map[string]string{"Inner.Inner.String": "twoLevel"}, Out: Root2Level{Inner: Inner2Level{Inner: Inner1Level{String: "twoLevel"}}}},
+		{In: map[string]string{"Inner.String": "oneLevel"}, Out: RootWithPointer{Inner: &Inner1Level{String: "oneLevel"}}},
+	}
+	for _, test := range tests {
+		zero := reflect.New(reflect.TypeOf(test.Out))
+		err := redmap.Unmarshal(test.In, zero.Interface())
+		if err != nil {
+			t.Fatalf("Unmarshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(zero.Elem().Interface(), test.Out) {
+			t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, zero)
+		}
+	}
+}

@@ -15,7 +15,7 @@ func Marshal(v interface{}) (map[string]string, error) {
 		return nil, err
 	}
 	ret := make(map[string]string)
-	return ret, marshalRecurse(ret, "", val)
+	return ret, marshalRecursive(ret, "", val)
 }
 
 func structValue(v interface{}) (reflect.Value, error) {
@@ -35,11 +35,11 @@ func structValue(v interface{}) (reflect.Value, error) {
 	}
 }
 
-// marshalRecurse marshal a struct represented by val into a map[string]string.
+// marshalRecursive marshal a struct represented by val into a map[string]string.
 // Given its recursive nature, it needs to remember the intermediate results:
 // mp is the temporary marshal result; prefix is the prefix applied to a field
 // name in case of an inlined inner struct.
-func marshalRecurse(mp map[string]string, prefix string, stru reflect.Value) error {
+func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) error {
 	typ := stru.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
@@ -65,7 +65,7 @@ func marshalRecurse(mp map[string]string, prefix string, stru reflect.Value) err
 			if kind := value.Kind(); kind != reflect.Struct {
 				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNotStruct))
 			}
-			err := marshalRecurse(mp, prefix+tags.name+inlineSep, value)
+			err := marshalRecursive(mp, prefix+tags.name+inlineSep, value)
 			if err != nil {
 				return err
 			}
