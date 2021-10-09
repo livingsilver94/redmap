@@ -7,6 +7,14 @@ import (
 	"strconv"
 )
 
+// Unmarshal sets v's fields according to its map representation contained by data.
+// v must be a pointer to struct or an interface. Neither data nor v can be nil.
+//
+// Unmarshal uses the inverse of the encodings that Marshal uses, so all the types supported
+// by it are also supported in Unmarshal, except the interfaces: only encoding.TextUnmarshaler
+// can be unmarshaled.
+//
+// The decoding of each struct field can be customized by the format string documented in Marshal.
 func Unmarshal(data map[string]string, v interface{}) error {
 	if data == nil {
 		return errIs("map passed", ErrNilValue)
