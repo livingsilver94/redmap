@@ -67,7 +67,7 @@ func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Valu
 		for value.Kind() == reflect.Ptr {
 			if value.IsNil() {
 				if !value.CanSet() {
-					break
+					return fmt.Errorf("cannot set embedded pointer to unexported type %s", value.Elem().Type())
 				}
 				value.Set(reflect.New(value.Type().Elem()))
 			}
