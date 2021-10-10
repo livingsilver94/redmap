@@ -19,6 +19,13 @@ type StubStringer struct{}
 
 func (s StubStringer) String() string { return stringerOut }
 
+// StubIntStringer implements fmt.Stringer but doesn't rely on an
+// underlying struct. Useful to test whether we can detect
+// interfaces independently from their underlying type.
+type StubIntStringer int
+
+func (s StubIntStringer) String() string { return stringerOut }
+
 type StubTextMarshaler struct{}
 
 func (s StubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
@@ -81,10 +88,12 @@ func TestMarshalScalars(t *testing.T) {
 
 		// Marshal interfaces by passing the real value.
 		{In: struct{ V StubStringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V StubIntStringer }{StubIntStringer(100)}, Out: map[string]string{"V": textMarshalerOut}},
 		{In: struct{ V StubTextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 
 		// Marshal interfaces by interfaces.
 		{In: struct{ V fmt.Stringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V fmt.Stringer }{StubIntStringer(100)}, Out: map[string]string{"V": textMarshalerOut}},
 		{In: struct{ V encoding.TextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 	}
 	for _, test := range tests {

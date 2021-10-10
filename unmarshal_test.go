@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/livingsilver94/redmap"
@@ -13,6 +14,20 @@ type StubTextUnmarshaler struct{ S string }
 
 func (s *StubTextUnmarshaler) UnmarshalText(text []byte) error {
 	s.S = string(text)
+	return nil
+}
+
+// StubIntUnmarshaler implements encoding.TextUnmarshaler but doesn't rely on an
+// underlying struct. Useful to test whether we can detect
+// interfaces independently from their underlying type.
+type StubIntUnmarshaler int
+
+func (s *StubIntUnmarshaler) UnmarshalText(text []byte) error {
+	v, err := strconv.Atoi(string(text))
+	if err != nil {
+		return err
+	}
+	*s = StubIntUnmarshaler(v)
 	return nil
 }
 
@@ -102,6 +117,7 @@ func TestUnmarshalScalars(t *testing.T) {
 		{In: map[string]string{"V": "(100.1+80.1i)"}, Out: struct{ V complex128 }{100.1 + 80.1i}},
 		{In: map[string]string{"V": "str"}, Out: struct{ V string }{"str"}},
 		{In: map[string]string{"V": "a test"}, Out: struct{ V StubTextUnmarshaler }{StubTextUnmarshaler{S: "a test"}}},
+		{In: map[string]string{"V": "100"}, Out: struct{ V StubIntStringer }{StubIntStringer(100)}},
 	}
 	for _, test := range tests {
 		zero := reflect.New(reflect.TypeOf(test.Out))
