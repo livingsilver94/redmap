@@ -105,6 +105,11 @@ func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Valu
 }
 
 func stringToField(str string, field reflect.Value, omitempty bool) error {
+	addr := field.Addr() // Unmarshaling always requires a pointer receiver.
+	if addr.Type().Implements(textUnmarshalerType) {
+		return addr.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(str))
+	}
+
 	var (
 		val reflect.Value
 		err error
@@ -157,13 +162,8 @@ func stringToField(str string, field reflect.Value, omitempty bool) error {
 		val, err = reflect.ValueOf(v), e
 	case reflect.String:
 		val, err = reflect.ValueOf(str), nil
-	case reflect.Struct:
-		f := field.Addr() // Unmarshaling always requires a pointer receiver.
-		t := f.Type()
-		if t.Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) {
-			return f.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(str))
-		}
-		return fmt.Errorf("%s doesn't implement TextUnmarshaler", t)
+	default:
+		return fmt.Errorf("%s doesn't implement TextUnmarshaler", addr)
 	}
 	if err != nil {
 		return err
@@ -174,3 +174,7 @@ func stringToField(str string, field reflect.Value, omitempty bool) error {
 	field.Set(val)
 	return nil
 }
+
+var (
+	textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
+)

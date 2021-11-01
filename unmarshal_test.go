@@ -117,7 +117,7 @@ func TestUnmarshalScalars(t *testing.T) {
 		{In: map[string]string{"V": "(100.1+80.1i)"}, Out: struct{ V complex128 }{100.1 + 80.1i}},
 		{In: map[string]string{"V": "str"}, Out: struct{ V string }{"str"}},
 		{In: map[string]string{"V": "a test"}, Out: struct{ V StubTextUnmarshaler }{StubTextUnmarshaler{S: "a test"}}},
-		{In: map[string]string{"V": "100"}, Out: struct{ V StubIntStringer }{StubIntStringer(100)}},
+		{In: map[string]string{"V": "100"}, Out: struct{ V StubIntUnmarshaler }{StubIntUnmarshaler(100)}},
 	}
 	for _, test := range tests {
 		zero := reflect.New(reflect.TypeOf(test.Out))
