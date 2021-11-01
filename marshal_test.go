@@ -86,14 +86,14 @@ func TestMarshalScalars(t *testing.T) {
 		{In: struct{ V complex128 }{100.1 + 80.1i}, Out: map[string]string{"V": "(100.1+80.1i)"}},
 		{In: struct{ V string }{"str"}, Out: map[string]string{"V": "str"}},
 
-		// Marshal interfaces by passing the real value.
+		// // Marshal interfaces by passing the real value.
 		{In: struct{ V StubStringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V StubIntStringer }{StubIntStringer(100)}, Out: map[string]string{"V": textMarshalerOut}},
+		{In: struct{ V StubIntStringer }{StubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
 		{In: struct{ V StubTextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 
 		// Marshal interfaces by interfaces.
 		{In: struct{ V fmt.Stringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V fmt.Stringer }{StubIntStringer(100)}, Out: map[string]string{"V": textMarshalerOut}},
+		{In: struct{ V fmt.Stringer }{StubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
 		{In: struct{ V encoding.TextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 	}
 	for _, test := range tests {
