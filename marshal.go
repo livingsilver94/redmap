@@ -118,6 +118,15 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 }
 
 func fieldToString(val reflect.Value) (string, error) {
+	typ := val.Type()
+	if typ.Implements(textMarshalerType) {
+		str, err := val.Interface().(encoding.TextMarshaler).MarshalText()
+		return string(str), err
+	}
+	if typ.Implements(stringerType) {
+		return val.Interface().(fmt.Stringer).String(), nil
+	}
+
 	switch val.Kind() {
 	case reflect.Bool:
 		return strconv.FormatBool(val.Bool()), nil
@@ -135,15 +144,11 @@ func fieldToString(val reflect.Value) (string, error) {
 		return strconv.FormatComplex(val.Complex(), 'f', -1, 128), nil
 	case reflect.String:
 		return val.String(), nil
-	case reflect.Interface, reflect.Struct:
-		typ := val.Type()
-		if typ.Implements(reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()) {
-			str, err := val.Interface().(encoding.TextMarshaler).MarshalText()
-			return string(str), err
-		}
-		if typ.Implements(reflect.TypeOf((*fmt.Stringer)(nil)).Elem()) {
-			return val.Interface().(fmt.Stringer).String(), nil
-		}
 	}
 	return "", fmt.Errorf("%s doesn't implement TextMarshaler or Stringer", val.Type())
 }
+
+var (
+	textMarshalerType = reflect.TypeOf(new(encoding.TextMarshaler)).Elem()
+	stringerType      = reflect.TypeOf(new(fmt.Stringer)).Elem()
+)
