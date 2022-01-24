@@ -10,6 +10,7 @@ import (
 	"github.com/livingsilver94/redmap"
 )
 
+// stubTextUnmarshaler implements the encoding.TextUnmarshaler interface.
 type stubTextUnmarshaler struct{ S string }
 
 func (s *stubTextUnmarshaler) UnmarshalText(text []byte) error {
@@ -17,9 +18,8 @@ func (s *stubTextUnmarshaler) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// StubIntUnmarshaler implements encoding.TextUnmarshaler but doesn't rely on an
-// underlying struct. Useful to test whether we can detect
-// interfaces independently from their underlying type.
+// StubIntUnmarshaler is an int that implements encoding.TextUnmarshaler,
+// so that we can test if a non-struct type is correctly handled as an interface.
 type StubIntUnmarshaler int
 
 func (s *StubIntUnmarshaler) UnmarshalText(text []byte) error {
@@ -31,6 +31,7 @@ func (s *StubIntUnmarshaler) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// emptyMap is a non-nil, zero-length map.
 var emptyMap = make(map[string]string)
 
 func TestUnmarshalValidType(t *testing.T) {

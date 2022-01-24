@@ -11,21 +11,22 @@ import (
 )
 
 const (
-	stringerOut      = "stub"
-	textMarshalerOut = "stubtext"
+	stringerOut      = "stub"     // stringerOut is the output of fmt.Stringer implementations.
+	textMarshalerOut = "stubtext" // textMarshalerOut  is the output of encoding.TextMarshaler implementations.
 )
 
+// stubStringer implements the fmt.Stringer interface.
 type stubStringer struct{}
 
 func (s stubStringer) String() string { return stringerOut }
 
-// stubIntStringer implements fmt.Stringer but doesn't rely on an
-// underlying struct. Useful to test whether we can detect
-// interfaces independently from their underlying type.
+// stubIntStringer is an int that implements fmt.Stringer,
+// so that we can test if a non-struct type is correctly handled as an interface.
 type stubIntStringer int
 
 func (s stubIntStringer) String() string { return stringerOut }
 
+// stubTextMarshaler implements the encoding.TextMarshaler interface.
 type stubTextMarshaler struct{}
 
 func (s stubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
