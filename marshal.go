@@ -83,6 +83,9 @@ func structValue(v interface{}) (reflect.Value, error) {
 // name in case of an inlined inner struct.
 func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) error {
 	typ := stru.Type()
+	if typ.Implements(mapMarshalerType) {
+		return structToMap(mp, prefix, stru)
+	}
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		if field.PkgPath != "" {
@@ -118,6 +121,17 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 			}
 			mp[prefix+tags.name] = str
 		}
+	}
+	return nil
+}
+
+func structToMap(mp map[string]string, prefix string, stru reflect.Value) error {
+	conv, err := stru.Interface().(StringMapMarshaler).MarshalStringMap()
+	if err != nil {
+		return err
+	}
+	for k, v := range conv {
+		mp[prefix+k] = v
 	}
 	return nil
 }

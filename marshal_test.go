@@ -15,6 +15,11 @@ const (
 	textMarshalerOut = "stubtext" // textMarshalerOut  is the output of encoding.TextMarshaler implementations.
 )
 
+var (
+	// mapMarshalerOut is the output of redmap.StringMapMarshaler implementations.
+	mapMarshalerOut = map[string]string{"field1": "value1", "field2": "value2"}
+)
+
 // stubStringer implements the fmt.Stringer interface.
 type stubStringer struct{}
 
@@ -30,6 +35,21 @@ func (s stubIntStringer) String() string { return stringerOut }
 type stubTextMarshaler struct{}
 
 func (s stubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
+
+// stubMapMarshaler implements the redmap.StringMapMarshaler interface.
+type stubMapMarshaler struct{}
+
+func (s stubMapMarshaler) MarshalStringMap() (map[string]string, error) {
+	return mapMarshalerOut, nil
+}
+
+// stubIntMapMarshaler is an int that implements redmap.StringMapMarshaler,
+// so that we can test if a non-struct type is correctly handled as an interface.
+type stubIntMapMarshaler struct{}
+
+func (s stubIntMapMarshaler) MarshalStringMap() (map[string]string, error) {
+	return mapMarshalerOut, nil
+}
 
 func TestMarshalValidType(t *testing.T) {
 	var (
@@ -182,6 +202,47 @@ func TestMarshalWithTags(t *testing.T) {
 		"DefaultName": "defaultname",
 		"customname":  "renamed",
 	}
+	out, err := redmap.Marshal(stru)
+	if err != nil {
+		t.Fatalf("Marshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("Marshal's output doesn't respect struct tags\n\tExpected: %v\n\tOut: %v", expected, out)
+	}
+}
+
+func TestMapMarshaler(t *testing.T) {
+	tests := []struct {
+		In  redmap.StringMapMarshaler
+		Out map[string]string
+	}{
+		{In: stubMapMarshaler{}, Out: mapMarshalerOut},
+		{In: stubIntMapMarshaler{}, Out: mapMarshalerOut},
+	}
+	for _, test := range tests {
+		out, err := redmap.Marshal(test.In)
+		if err != nil {
+			t.Fatalf("Marshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(out, test.Out) {
+			t.Fatalf("Marshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, out)
+		}
+	}
+}
+
+func TestInnerMapMarshaler(t *testing.T) {
+	stru := struct {
+		RegularField string
+		Struct       stubMapMarshaler `redmap:",inline"`
+	}{
+		RegularField: "regular",
+		Struct:       stubMapMarshaler{},
+	}
+	expected := map[string]string{"RegularField": "regular"}
+	for k, v := range mapMarshalerOut {
+		expected["Struct."+k] = v
+	}
+
 	out, err := redmap.Marshal(stru)
 	if err != nil {
 		t.Fatalf("Marshal returned unexpected error %q", err)
