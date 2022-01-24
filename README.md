@@ -24,7 +24,7 @@ When the download finishes, you'll find Redmap under the unsurprising name of `r
 
 ## Usage
 
-[This example](https://play.golang.org/p/sIcwTP2zAzJ) shows the simplest usage of Redmap. Usage of struct tags and unmarshaling pitfalls are better illustrated in the documentation.
+[This example](https://go.dev/play/p/sIcwTP2zAzJ) shows the simplest usage of Redmap. Usage of struct tags and unmarshaling pitfalls are better illustrated in the documentation.
 
 ```go
 package main
