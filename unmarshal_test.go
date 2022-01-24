@@ -10,9 +10,9 @@ import (
 	"github.com/livingsilver94/redmap"
 )
 
-type StubTextUnmarshaler struct{ S string }
+type stubTextUnmarshaler struct{ S string }
 
-func (s *StubTextUnmarshaler) UnmarshalText(text []byte) error {
+func (s *stubTextUnmarshaler) UnmarshalText(text []byte) error {
 	s.S = string(text)
 	return nil
 }
@@ -35,8 +35,8 @@ var emptyMap = make(map[string]string)
 
 func TestUnmarshalValidType(t *testing.T) {
 	tests := []interface{}{
-		StubStringer{},
-		&StubStringer{},
+		stubStringer{},
+		&stubStringer{},
 	}
 	for _, test := range tests {
 		val := reflect.New(reflect.TypeOf(test))
@@ -48,7 +48,7 @@ func TestUnmarshalValidType(t *testing.T) {
 }
 
 func TestUnmarshalNil(t *testing.T) {
-	err := redmap.Unmarshal(nil, &StubStringer{})
+	err := redmap.Unmarshal(nil, &stubStringer{})
 	if !errors.Is(err, redmap.ErrNilValue) {
 		t.Fatal("Unmarshal() with a nil map did not return the specific error")
 	}
@@ -56,7 +56,7 @@ func TestUnmarshalNil(t *testing.T) {
 	if !errors.Is(err, redmap.ErrNilValue) {
 		t.Fatal("Unmarshal() with invalid target did not return the specific error")
 	}
-	var nilPtr *StubStringer
+	var nilPtr *stubStringer
 	err = redmap.Unmarshal(emptyMap, nilPtr)
 	if !errors.Is(err, redmap.ErrNilValue) {
 		t.Fatal("Unmarshal() with nil pointer did not return the specific error")
@@ -82,7 +82,7 @@ func TestUnmarshalInvalidType(t *testing.T) {
 		{
 			// Interface is not a struct.
 			val: func() reflect.Value {
-				v := fmt.Stringer(StubStringer{})
+				v := fmt.Stringer(stubStringer{})
 				return reflect.ValueOf(&v)
 			},
 			expErr: redmap.ErrNotStruct},
@@ -116,7 +116,7 @@ func TestUnmarshalScalars(t *testing.T) {
 		{In: map[string]string{"V": "(100.1+80.1i)"}, Out: struct{ V complex64 }{100.1 + 80.1i}},
 		{In: map[string]string{"V": "(100.1+80.1i)"}, Out: struct{ V complex128 }{100.1 + 80.1i}},
 		{In: map[string]string{"V": "str"}, Out: struct{ V string }{"str"}},
-		{In: map[string]string{"V": "a test"}, Out: struct{ V StubTextUnmarshaler }{StubTextUnmarshaler{S: "a test"}}},
+		{In: map[string]string{"V": "a test"}, Out: struct{ V stubTextUnmarshaler }{stubTextUnmarshaler{S: "a test"}}},
 		{In: map[string]string{"V": "100"}, Out: struct{ V StubIntUnmarshaler }{StubIntUnmarshaler(100)}},
 	}
 	for _, test := range tests {
@@ -185,7 +185,7 @@ func TestUnarshalUnexported(t *testing.T) {
 		}{Exp: "atest"}},
 		{Out: struct {
 			Exp   string
-			unexp StubTextUnmarshaler
+			unexp stubTextUnmarshaler
 		}{Exp: "atest"}},
 	}
 	for _, test := range tests {

@@ -15,24 +15,24 @@ const (
 	textMarshalerOut = "stubtext"
 )
 
-type StubStringer struct{}
+type stubStringer struct{}
 
-func (s StubStringer) String() string { return stringerOut }
+func (s stubStringer) String() string { return stringerOut }
 
-// StubIntStringer implements fmt.Stringer but doesn't rely on an
+// stubIntStringer implements fmt.Stringer but doesn't rely on an
 // underlying struct. Useful to test whether we can detect
 // interfaces independently from their underlying type.
-type StubIntStringer int
+type stubIntStringer int
 
-func (s StubIntStringer) String() string { return stringerOut }
+func (s stubIntStringer) String() string { return stringerOut }
 
-type StubTextMarshaler struct{}
+type stubTextMarshaler struct{}
 
-func (s StubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
+func (s stubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
 
 func TestMarshalValidType(t *testing.T) {
 	var (
-		stub StubStringer = StubStringer{}
+		stub stubStringer = stubStringer{}
 		ifac fmt.Stringer = stub
 	)
 	types := []interface{}{
@@ -50,7 +50,7 @@ func TestMarshalValidType(t *testing.T) {
 
 func TestMarshalNil(t *testing.T) {
 	var (
-		stub *StubStringer = nil
+		stub *stubStringer = nil
 		ifac fmt.Stringer  = stub
 	)
 	nils := []interface{}{nil, stub, ifac}
@@ -87,14 +87,14 @@ func TestMarshalScalars(t *testing.T) {
 		{In: struct{ V string }{"str"}, Out: map[string]string{"V": "str"}},
 
 		// // Marshal interfaces by passing the real value.
-		{In: struct{ V StubStringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V StubIntStringer }{StubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V StubTextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
+		{In: struct{ V stubStringer }{stubStringer{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V stubIntStringer }{stubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V stubTextMarshaler }{stubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 
 		// Marshal interfaces by interfaces.
-		{In: struct{ V fmt.Stringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V fmt.Stringer }{StubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V encoding.TextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
+		{In: struct{ V fmt.Stringer }{stubStringer{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V fmt.Stringer }{stubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V encoding.TextMarshaler }{stubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 	}
 	for _, test := range tests {
 		out, err := redmap.Marshal(test.In)
