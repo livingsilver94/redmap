@@ -7,6 +7,12 @@ import (
 	"strconv"
 )
 
+// StringMapUnmarshaler is the interface implemented by types that can unmarshal themselves
+// from a map of strings. Implementations must copy the given map if they wish to modify it.
+type StringMapUnmarshaler interface {
+	UnmarshalStringMap(map[string]string) error
+}
+
 // Unmarshal sets v's fields according to its map representation contained by data.
 // v must be a pointer to struct or an interface. Neither data nor v can be nil.
 //
@@ -176,5 +182,6 @@ func stringToField(str string, field reflect.Value, omitempty bool) error {
 }
 
 var (
+	mapUnmarshalerType  = reflect.TypeOf(new(StringMapUnmarshaler)).Elem()
 	textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
 )

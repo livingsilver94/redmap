@@ -9,6 +9,11 @@ import (
 
 const inlineSep = "."
 
+// StringMapMarshaler is the interface implemented by types that can marshal themselves into a map of strings.
+type StringMapMarshaler interface {
+	MarshalStringMap() (map[string]string, error)
+}
+
 // Marshal returns the map[string]string representation of v, which must be a struct,
 // by reading every exported field and translating it into a (key, value) pair to be
 // added to the resulting map. Interfaces or pointers to struct are also accepted.
@@ -149,6 +154,7 @@ func fieldToString(val reflect.Value) (string, error) {
 }
 
 var (
-	textMarshalerType = reflect.TypeOf(new(encoding.TextMarshaler)).Elem()
+	mapMarshalerType  = reflect.TypeOf(new(StringMapMarshaler)).Elem()
 	stringerType      = reflect.TypeOf(new(fmt.Stringer)).Elem()
+	textMarshalerType = reflect.TypeOf(new(encoding.TextMarshaler)).Elem()
 )
