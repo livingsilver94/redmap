@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 // StringMapUnmarshaler is the interface implemented by types that can unmarshal themselves
@@ -55,11 +56,17 @@ func ptrStructValue(v interface{}) (reflect.Value, error) {
 	case reflect.Invalid:
 		return reflect.Value{}, errIs(reflect.TypeOf(v), ErrNilValue)
 	default:
-		return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
+		if !val.Addr().Type().Implements(mapUnmarshalerType) {
+			return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
+		}
+		return val, nil
 	}
 }
 
-func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Value) error {
+func unmarshalRecursive(mp map[string]string, prefix string, stru reflect.Value) error {
+	if ptr := stru.Addr(); ptr.Type().Implements(mapUnmarshalerType) {
+		return mapToStruct(mp, prefix, ptr)
+	}
 	typ := stru.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
@@ -92,12 +99,12 @@ func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Valu
 			if kind := value.Kind(); kind != reflect.Struct {
 				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNotStruct))
 			}
-			err := unmarshalRecursive(data, tags.name+inlineSep, value)
+			err := unmarshalRecursive(mp, tags.name+inlineSep, value)
 			if err != nil {
 				return err
 			}
 		} else {
-			str, ok := data[tags.name]
+			str, ok := mp[tags.name]
 			if !ok {
 				continue
 			}
@@ -108,6 +115,21 @@ func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Valu
 		}
 	}
 	return nil
+}
+
+func mapToStruct(mp map[string]string, prefix string, stru reflect.Value) error {
+	if prefix != "" {
+		// FIXME: Creating a submap is O(n). Can we think of a better algorithm?
+		subMP := make(map[string]string, len(mp))
+		for k, v := range mp {
+			if !strings.HasPrefix(k, prefix) {
+				continue
+			}
+			subMP[k[len(prefix):]] = v
+		}
+		mp = subMP
+	}
+	return stru.Interface().(StringMapUnmarshaler).UnmarshalStringMap(mp)
 }
 
 func stringToField(str string, field reflect.Value, omitempty bool) error {
