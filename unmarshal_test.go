@@ -104,14 +104,14 @@ func TestUnmarshalInvalidType(t *testing.T) {
 				v := 100
 				return reflect.ValueOf(&v)
 			},
-			expErr: redmap.ErrNotStruct},
+			expErr: redmap.ErrNoCodec},
 		{
 			// Interface is not a struct.
 			val: func() reflect.Value {
 				v := fmt.Stringer(stubStringer{})
 				return reflect.ValueOf(&v)
 			},
-			expErr: redmap.ErrNotStruct},
+			expErr: redmap.ErrNoCodec},
 	}
 	for _, test := range tests {
 		err := redmap.Unmarshal(emptyMap, test.val().Interface())
@@ -275,25 +275,32 @@ func TestMapUnmarshaler(t *testing.T) {
 }
 
 func TestInnerMapUnmarshaler(t *testing.T) {
-	expected := struct {
-		RegularField string
-		Struct       stubMapUnmarshaler `redmap:",inline"`
+	tests := []struct {
+		In  map[string]string
+		Out interface{}
 	}{
-		RegularField: "regular",
-		Struct:       stubMapUnmarshaler{Field1: "value1", Field2: "value2"},
-	}
-	mp := map[string]string{
-		"RegularField":  "regular",
-		"Struct.Field1": "value1",
-		"Struct.Field2": "value2",
+		{In: map[string]string{"RegularField": "regular", "Struct.Field1": "value1", "Struct.Field2": "value2"},
+			Out: struct {
+				RegularField string
+				Struct       stubMapUnmarshaler `redmap:",inline"`
+			}{"regular", stubMapUnmarshaler{Field1: "value1", Field2: "value2"}},
+		},
+		// {In: map[string]string{"RegularField": "regular", "Inner.Field1": "666"},
+		// 	Out: struct {
+		// 		RegularField string
+		// 		Inner        stubIntMapUnmarshaler `redmap:",inline"`
+		// 	}{"regular", stubIntMapUnmarshaler(666)},
+		// },
 	}
 
-	actual := reflect.New(reflect.TypeOf(expected))
-	err := redmap.Unmarshal(mp, actual.Interface())
-	if err != nil {
-		t.Fatalf("Unmarshal returned unexpected error %q", err)
-	}
-	if !reflect.DeepEqual(actual.Elem().Interface(), expected) {
-		t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", mp, expected, actual)
+	for _, test := range tests {
+		actual := reflect.New(reflect.TypeOf(test.Out))
+		err := redmap.Unmarshal(test.In, actual.Interface())
+		if err != nil {
+			t.Fatalf("Unmarshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(actual.Elem().Interface(), test.Out) {
+			t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, actual)
+		}
 	}
 }
