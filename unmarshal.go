@@ -57,7 +57,7 @@ func ptrStructValue(v interface{}) (reflect.Value, error) {
 		return reflect.Value{}, errIs(reflect.TypeOf(v), ErrNilValue)
 	default:
 		if !val.Addr().Type().Implements(mapUnmarshalerType) {
-			return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
+			return reflect.Value{}, errIs(val.Type(), ErrNoCodec)
 		}
 		return val, nil
 	}
@@ -97,7 +97,7 @@ func unmarshalRecursive(mp map[string]string, prefix string, stru reflect.Value)
 
 		if tags.inline {
 			if kind := value.Kind(); kind != reflect.Struct {
-				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNotStruct))
+				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNoCodec))
 			}
 			err := unmarshalRecursive(mp, tags.name+inlineSep, value)
 			if err != nil {

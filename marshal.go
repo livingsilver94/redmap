@@ -74,7 +74,7 @@ func structValue(v interface{}) (reflect.Value, error) {
 		return reflect.Value{}, ErrNilValue
 	default:
 		if !val.Type().Implements(mapMarshalerType) {
-			return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
+			return reflect.Value{}, errIs(val.Type(), ErrNoCodec)
 		}
 		return val, nil
 	}
@@ -111,7 +111,7 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 
 		if tags.inline {
 			if kind := value.Kind(); kind != reflect.Struct {
-				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNotStruct))
+				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNoCodec))
 			}
 			err := marshalRecursive(mp, prefix+tags.name+inlineSep, value)
 			if err != nil {
