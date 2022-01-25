@@ -45,7 +45,7 @@ func (s stubMapMarshaler) MarshalStringMap() (map[string]string, error) {
 
 // stubIntMapMarshaler is an int that implements redmap.StringMapMarshaler,
 // so that we can test if a non-struct type is correctly handled as an interface.
-type stubIntMapMarshaler struct{}
+type stubIntMapMarshaler int
 
 func (s stubIntMapMarshaler) MarshalStringMap() (map[string]string, error) {
 	return mapMarshalerOut, nil
@@ -217,7 +217,7 @@ func TestMapMarshaler(t *testing.T) {
 		Out map[string]string
 	}{
 		{In: stubMapMarshaler{}, Out: mapMarshalerOut},
-		{In: stubIntMapMarshaler{}, Out: mapMarshalerOut},
+		{In: stubIntMapMarshaler(666), Out: mapMarshalerOut},
 	}
 	for _, test := range tests {
 		out, err := redmap.Marshal(test.In)

@@ -73,7 +73,10 @@ func structValue(v interface{}) (reflect.Value, error) {
 	case reflect.Invalid:
 		return reflect.Value{}, ErrNilValue
 	default:
-		return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
+		if !val.Type().Implements(mapMarshalerType) {
+			return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
+		}
+		return val, nil
 	}
 }
 
