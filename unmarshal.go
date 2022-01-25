@@ -26,17 +26,16 @@ func Unmarshal(data map[string]string, v interface{}) error {
 	if data == nil {
 		return errIs("map passed", ErrNilValue)
 	}
-	val, err := ptrStructValue(v)
+	val, err := ptrValidValue(v)
 	if err != nil {
 		return err
 	}
 	return unmarshalRecursive(data, "", val)
 }
 
-func ptrStructValue(v interface{}) (reflect.Value, error) {
+func ptrValidValue(v interface{}) (reflect.Value, error) {
 	val := reflect.ValueOf(v)
 	kin := val.Kind()
-
 	switch kin {
 	case reflect.Ptr:
 	case reflect.Invalid:
@@ -44,28 +43,22 @@ func ptrStructValue(v interface{}) (reflect.Value, error) {
 	default:
 		return reflect.Value{}, errIs(val.Type(), ErrNotPointer)
 	}
-
 	for kin == reflect.Ptr {
 		val = val.Elem()
 		kin = val.Kind()
 	}
-
-	switch kin {
-	case reflect.Struct:
-		return val, nil
-	case reflect.Invalid:
+	if kin == reflect.Invalid {
 		return reflect.Value{}, errIs(reflect.TypeOf(v), ErrNilValue)
-	default:
-		if !val.Addr().Type().Implements(mapUnmarshalerType) {
-			return reflect.Value{}, errIs(val.Type(), ErrNoCodec)
-		}
-		return val, nil
 	}
+	return val, nil
 }
 
 func unmarshalRecursive(mp map[string]string, prefix string, stru reflect.Value) error {
 	if ptr := stru.Addr(); ptr.Type().Implements(mapUnmarshalerType) {
 		return mapToStruct(mp, prefix, ptr)
+	}
+	if stru.Kind() != reflect.Struct {
+		return errIs(stru.Type(), ErrNoCodec)
 	}
 	typ := stru.Type()
 	for i := 0; i < typ.NumField(); i++ {
@@ -96,9 +89,6 @@ func unmarshalRecursive(mp map[string]string, prefix string, stru reflect.Value)
 		}
 
 		if tags.inline {
-			if kind := value.Kind(); kind != reflect.Struct {
-				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNoCodec))
-			}
 			err := unmarshalRecursive(mp, tags.name+inlineSep, value)
 			if err != nil {
 				return err
