@@ -14,11 +14,12 @@ type StringMapMarshaler interface {
 	MarshalStringMap() (map[string]string, error)
 }
 
-// Marshal returns the map[string]string representation of v, which must be a struct,
-// by reading every exported field and translating it into a (key, value) pair to be
-// added to the resulting map. Interfaces or pointers to struct are also accepted.
+// Marshal returns the map[string]string representation of v, which must be a struct
+// or implementing StringMapMarshaler. When implementing the interface, the map is returned verbatim
+// from its method along with the error value. When not, Marshal reads every exported field and translates it
+// into a (key, value) pair to be added to the resulting map. Interfaces or pointers to struct are also accepted.
 //
-// Marshal converts all non-reference built-in types except arrays, plus
+// Marshal converts all fields of non-reference built-in types except arrays, plus
 // structs implementing encoding.TextMarshaler or fmt.Stringer, checked in this exact order.
 //
 // The encoding of each struct field can be customized by the format string stored under the "redmap"
@@ -47,9 +48,9 @@ type StringMapMarshaler interface {
 //   // Field appears in the map as key "-".
 //   Field int `redmap:"-,"`
 //
-//   // Field must be a struct. Field is flattened and its fields
-//   // are added to the map as (key, value) pairs, where the keys
-//   // are constructed in the "customName.subFieldName" format.
+//   // Field must be a struct or implementing StringMapMarshaler.
+//   // The resulting map is added to the final map with keys flattened,
+//   // constructed in the "customName.subKeyName" format.
 //   Field int `redmap:"customName,inline"`
 func Marshal(v interface{}) (map[string]string, error) {
 	val, err := validValue(v)
