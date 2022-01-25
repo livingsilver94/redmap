@@ -5,31 +5,36 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
+
+// StringMapUnmarshaler is the interface implemented by types that can unmarshal themselves
+// from a map of strings. Implementations must copy the given map if they wish to modify it.
+type StringMapUnmarshaler interface {
+	UnmarshalStringMap(map[string]string) error
+}
 
 // Unmarshal sets v's fields according to its map representation contained by data.
 // v must be a pointer to struct or an interface. Neither data nor v can be nil.
 //
 // Unmarshal uses the inverse of the encodings that Marshal uses, so all the types supported
-// by it are also supported in Unmarshal, except the interfaces: only encoding.TextUnmarshaler
-// can be unmarshaled.
+// by it are also supported in Unmarshal, except fmt.Stringer which doesn't have an inverse.
 //
 // The decoding of each struct field can be customized by the format string documented in Marshal.
 func Unmarshal(data map[string]string, v interface{}) error {
 	if data == nil {
 		return errIs("map passed", ErrNilValue)
 	}
-	val, err := ptrStructValue(v)
+	val, err := ptrValidValue(v)
 	if err != nil {
 		return err
 	}
 	return unmarshalRecursive(data, "", val)
 }
 
-func ptrStructValue(v interface{}) (reflect.Value, error) {
+func ptrValidValue(v interface{}) (reflect.Value, error) {
 	val := reflect.ValueOf(v)
 	kin := val.Kind()
-
 	switch kin {
 	case reflect.Ptr:
 	case reflect.Invalid:
@@ -37,23 +42,23 @@ func ptrStructValue(v interface{}) (reflect.Value, error) {
 	default:
 		return reflect.Value{}, errIs(val.Type(), ErrNotPointer)
 	}
-
 	for kin == reflect.Ptr {
 		val = val.Elem()
 		kin = val.Kind()
 	}
-
-	switch kin {
-	case reflect.Struct:
-		return val, nil
-	case reflect.Invalid:
+	if kin == reflect.Invalid {
 		return reflect.Value{}, errIs(reflect.TypeOf(v), ErrNilValue)
-	default:
-		return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
 	}
+	return val, nil
 }
 
-func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Value) error {
+func unmarshalRecursive(mp map[string]string, prefix string, stru reflect.Value) error {
+	if ptr := stru.Addr(); ptr.Type().Implements(mapUnmarshalerType) {
+		return mapToStruct(mp, prefix, ptr)
+	}
+	if stru.Kind() != reflect.Struct {
+		return errIs(stru.Type(), ErrNoCodec)
+	}
 	typ := stru.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
@@ -83,15 +88,12 @@ func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Valu
 		}
 
 		if tags.inline {
-			if kind := value.Kind(); kind != reflect.Struct {
-				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNotStruct))
-			}
-			err := unmarshalRecursive(data, tags.name+inlineSep, value)
+			err := unmarshalRecursive(mp, tags.name+inlineSep, value)
 			if err != nil {
 				return err
 			}
 		} else {
-			str, ok := data[tags.name]
+			str, ok := mp[tags.name]
 			if !ok {
 				continue
 			}
@@ -102,6 +104,21 @@ func unmarshalRecursive(data map[string]string, prefix string, stru reflect.Valu
 		}
 	}
 	return nil
+}
+
+func mapToStruct(mp map[string]string, prefix string, stru reflect.Value) error {
+	if prefix != "" {
+		// FIXME: Creating a submap is O(n). Can we think of a better algorithm?
+		subMP := make(map[string]string, len(mp))
+		for k, v := range mp {
+			if !strings.HasPrefix(k, prefix) {
+				continue
+			}
+			subMP[k[len(prefix):]] = v
+		}
+		mp = subMP
+	}
+	return stru.Interface().(StringMapUnmarshaler).UnmarshalStringMap(mp)
 }
 
 func stringToField(str string, field reflect.Value, omitempty bool) error {
@@ -176,5 +193,6 @@ func stringToField(str string, field reflect.Value, omitempty bool) error {
 }
 
 var (
+	mapUnmarshalerType  = reflect.TypeOf(new(StringMapUnmarshaler)).Elem()
 	textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
 )

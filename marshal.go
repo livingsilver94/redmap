@@ -9,11 +9,17 @@ import (
 
 const inlineSep = "."
 
-// Marshal returns the map[string]string representation of v, which must be a struct,
-// by reading every exported field and translating it into a (key, value) pair to be
-// added to the resulting map. Interfaces or pointers to struct are also accepted.
+// StringMapMarshaler is the interface implemented by types that can marshal themselves into a map of strings.
+type StringMapMarshaler interface {
+	MarshalStringMap() (map[string]string, error)
+}
+
+// Marshal returns the map[string]string representation of v, which must be a struct
+// or implementing StringMapMarshaler. When implementing the interface, the map is returned verbatim
+// from its method along with the error value. When not, Marshal reads every exported field and translates it
+// into a (key, value) pair to be added to the resulting map. Interfaces or pointers to struct are also accepted.
 //
-// Marshal converts all non-reference built-in types except arrays, plus
+// Marshal converts all fields of non-reference built-in types except arrays, plus
 // structs implementing encoding.TextMarshaler or fmt.Stringer, checked in this exact order.
 //
 // The encoding of each struct field can be customized by the format string stored under the "redmap"
@@ -42,12 +48,12 @@ const inlineSep = "."
 //   // Field appears in the map as key "-".
 //   Field int `redmap:"-,"`
 //
-//   // Field must be a struct. Field is flattened and its fields
-//   // are added to the map as (key, value) pairs, where the keys
-//   // are constructed in the "customName.subFieldName" format.
+//   // Field must be a struct or implementing StringMapMarshaler.
+//   // The resulting map is added to the final map with keys flattened,
+//   // constructed in the "customName.subKeyName" format.
 //   Field int `redmap:"customName,inline"`
 func Marshal(v interface{}) (map[string]string, error) {
-	val, err := structValue(v)
+	val, err := validValue(v)
 	if err != nil {
 		return nil, err
 	}
@@ -55,21 +61,17 @@ func Marshal(v interface{}) (map[string]string, error) {
 	return ret, marshalRecursive(ret, "", val)
 }
 
-func structValue(v interface{}) (reflect.Value, error) {
+func validValue(v interface{}) (reflect.Value, error) {
 	val := reflect.ValueOf(v)
 	kin := val.Kind()
 	for kin == reflect.Interface || kin == reflect.Ptr {
 		val = val.Elem()
 		kin = val.Kind()
 	}
-	switch kin {
-	case reflect.Struct:
-		return val, nil
-	case reflect.Invalid:
+	if kin == reflect.Invalid {
 		return reflect.Value{}, ErrNilValue
-	default:
-		return reflect.Value{}, errIs(val.Type(), ErrNotStruct)
 	}
+	return val, nil
 }
 
 // marshalRecursive marshal a struct represented by val into a map[string]string.
@@ -78,6 +80,12 @@ func structValue(v interface{}) (reflect.Value, error) {
 // name in case of an inlined inner struct.
 func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) error {
 	typ := stru.Type()
+	if typ.Implements(mapMarshalerType) {
+		return structToMap(mp, prefix, stru)
+	}
+	if stru.Kind() != reflect.Struct {
+		return errIs(stru.Type(), ErrNoCodec)
+	}
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		if field.PkgPath != "" {
@@ -99,9 +107,6 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 		}
 
 		if tags.inline {
-			if kind := value.Kind(); kind != reflect.Struct {
-				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNotStruct))
-			}
 			err := marshalRecursive(mp, prefix+tags.name+inlineSep, value)
 			if err != nil {
 				return err
@@ -113,6 +118,17 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 			}
 			mp[prefix+tags.name] = str
 		}
+	}
+	return nil
+}
+
+func structToMap(mp map[string]string, prefix string, stru reflect.Value) error {
+	conv, err := stru.Interface().(StringMapMarshaler).MarshalStringMap()
+	if err != nil {
+		return err
+	}
+	for k, v := range conv {
+		mp[prefix+k] = v
 	}
 	return nil
 }
@@ -149,6 +165,7 @@ func fieldToString(val reflect.Value) (string, error) {
 }
 
 var (
-	textMarshalerType = reflect.TypeOf(new(encoding.TextMarshaler)).Elem()
+	mapMarshalerType  = reflect.TypeOf(new(StringMapMarshaler)).Elem()
 	stringerType      = reflect.TypeOf(new(fmt.Stringer)).Elem()
+	textMarshalerType = reflect.TypeOf(new(encoding.TextMarshaler)).Elem()
 )

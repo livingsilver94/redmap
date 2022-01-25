@@ -10,33 +10,59 @@ import (
 	"github.com/livingsilver94/redmap"
 )
 
-type StubTextUnmarshaler struct{ S string }
+// stubTextUnmarshaler implements the encoding.TextUnmarshaler interface.
+type stubTextUnmarshaler struct{ S string }
 
-func (s *StubTextUnmarshaler) UnmarshalText(text []byte) error {
+func (s *stubTextUnmarshaler) UnmarshalText(text []byte) error {
 	s.S = string(text)
 	return nil
 }
 
-// StubIntUnmarshaler implements encoding.TextUnmarshaler but doesn't rely on an
-// underlying struct. Useful to test whether we can detect
-// interfaces independently from their underlying type.
-type StubIntUnmarshaler int
+// stubIntTextUnmarshaler is an int that implements encoding.TextUnmarshaler,
+// so that we can test if a non-struct type is correctly handled as an interface.
+type stubIntTextUnmarshaler int
 
-func (s *StubIntUnmarshaler) UnmarshalText(text []byte) error {
+func (s *stubIntTextUnmarshaler) UnmarshalText(text []byte) error {
 	v, err := strconv.Atoi(string(text))
 	if err != nil {
 		return err
 	}
-	*s = StubIntUnmarshaler(v)
+	*s = stubIntTextUnmarshaler(v)
 	return nil
 }
 
+// stubMapMarshaler implements the redmap.StringMapUnmarshaler interface.
+type stubMapUnmarshaler struct {
+	Field1 string
+	Field2 string
+}
+
+func (s *stubMapUnmarshaler) UnmarshalStringMap(mp map[string]string) error {
+	s.Field1 = mp["Field1"]
+	s.Field2 = mp["Field2"]
+	return nil
+}
+
+// StubIntUnmarshaler is an int that implements redmap.StringMapUnmarshaler,
+// so that we can test if a non-struct type is correctly handled as an interface.
+type stubIntMapUnmarshaler int
+
+func (s *stubIntMapUnmarshaler) UnmarshalStringMap(mp map[string]string) error {
+	v, err := strconv.Atoi(mp["Field1"])
+	if err != nil {
+		return err
+	}
+	*s = stubIntMapUnmarshaler(v)
+	return nil
+}
+
+// emptyMap is a non-nil, zero-length map.
 var emptyMap = make(map[string]string)
 
 func TestUnmarshalValidType(t *testing.T) {
 	tests := []interface{}{
-		StubStringer{},
-		&StubStringer{},
+		stubStringer{},
+		&stubStringer{},
 	}
 	for _, test := range tests {
 		val := reflect.New(reflect.TypeOf(test))
@@ -48,7 +74,7 @@ func TestUnmarshalValidType(t *testing.T) {
 }
 
 func TestUnmarshalNil(t *testing.T) {
-	err := redmap.Unmarshal(nil, &StubStringer{})
+	err := redmap.Unmarshal(nil, &stubStringer{})
 	if !errors.Is(err, redmap.ErrNilValue) {
 		t.Fatal("Unmarshal() with a nil map did not return the specific error")
 	}
@@ -56,7 +82,7 @@ func TestUnmarshalNil(t *testing.T) {
 	if !errors.Is(err, redmap.ErrNilValue) {
 		t.Fatal("Unmarshal() with invalid target did not return the specific error")
 	}
-	var nilPtr *StubStringer
+	var nilPtr *stubStringer
 	err = redmap.Unmarshal(emptyMap, nilPtr)
 	if !errors.Is(err, redmap.ErrNilValue) {
 		t.Fatal("Unmarshal() with nil pointer did not return the specific error")
@@ -78,14 +104,14 @@ func TestUnmarshalInvalidType(t *testing.T) {
 				v := 100
 				return reflect.ValueOf(&v)
 			},
-			expErr: redmap.ErrNotStruct},
+			expErr: redmap.ErrNoCodec},
 		{
 			// Interface is not a struct.
 			val: func() reflect.Value {
-				v := fmt.Stringer(StubStringer{})
+				v := fmt.Stringer(stubStringer{})
 				return reflect.ValueOf(&v)
 			},
-			expErr: redmap.ErrNotStruct},
+			expErr: redmap.ErrNoCodec},
 	}
 	for _, test := range tests {
 		err := redmap.Unmarshal(emptyMap, test.val().Interface())
@@ -116,8 +142,8 @@ func TestUnmarshalScalars(t *testing.T) {
 		{In: map[string]string{"V": "(100.1+80.1i)"}, Out: struct{ V complex64 }{100.1 + 80.1i}},
 		{In: map[string]string{"V": "(100.1+80.1i)"}, Out: struct{ V complex128 }{100.1 + 80.1i}},
 		{In: map[string]string{"V": "str"}, Out: struct{ V string }{"str"}},
-		{In: map[string]string{"V": "a test"}, Out: struct{ V StubTextUnmarshaler }{StubTextUnmarshaler{S: "a test"}}},
-		{In: map[string]string{"V": "100"}, Out: struct{ V StubIntUnmarshaler }{StubIntUnmarshaler(100)}},
+		{In: map[string]string{"V": "a test"}, Out: struct{ V stubTextUnmarshaler }{stubTextUnmarshaler{S: "a test"}}},
+		{In: map[string]string{"V": "100"}, Out: struct{ V stubIntTextUnmarshaler }{stubIntTextUnmarshaler(100)}},
 	}
 	for _, test := range tests {
 		zero := reflect.New(reflect.TypeOf(test.Out))
@@ -185,7 +211,7 @@ func TestUnarshalUnexported(t *testing.T) {
 		}{Exp: "atest"}},
 		{Out: struct {
 			Exp   string
-			unexp StubTextUnmarshaler
+			unexp stubTextUnmarshaler
 		}{Exp: "atest"}},
 	}
 	for _, test := range tests {
@@ -224,5 +250,57 @@ func TestUnmarshalWithTags(t *testing.T) {
 	}
 	if !reflect.DeepEqual(copy, expected) {
 		t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", mp, expected, copy)
+	}
+}
+
+func TestMapUnmarshaler(t *testing.T) {
+	intUn := stubIntMapUnmarshaler(666)
+	tests := []struct {
+		In  map[string]string
+		Out redmap.StringMapUnmarshaler
+	}{
+		{In: map[string]string{"Field1": "value1", "Field2": "value2"}, Out: &stubMapUnmarshaler{Field1: "value1", Field2: "value2"}},
+		{In: map[string]string{"Field1": "666"}, Out: &intUn},
+	}
+	for _, test := range tests {
+		actual := reflect.New(reflect.TypeOf(test.Out).Elem())
+		err := redmap.Unmarshal(test.In, actual.Interface())
+		if err != nil {
+			t.Fatalf("Unmarshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(actual.Interface(), test.Out) {
+			t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, actual)
+		}
+	}
+}
+
+func TestInnerMapUnmarshaler(t *testing.T) {
+	tests := []struct {
+		In  map[string]string
+		Out interface{}
+	}{
+		{In: map[string]string{"RegularField": "regular", "Struct.Field1": "value1", "Struct.Field2": "value2"},
+			Out: struct {
+				RegularField string
+				Struct       stubMapUnmarshaler `redmap:",inline"`
+			}{"regular", stubMapUnmarshaler{Field1: "value1", Field2: "value2"}},
+		},
+		{In: map[string]string{"RegularField": "regular", "Inner.Field1": "666"},
+			Out: struct {
+				RegularField string
+				Inner        stubIntMapUnmarshaler `redmap:",inline"`
+			}{"regular", stubIntMapUnmarshaler(666)},
+		},
+	}
+
+	for _, test := range tests {
+		actual := reflect.New(reflect.TypeOf(test.Out))
+		err := redmap.Unmarshal(test.In, actual.Interface())
+		if err != nil {
+			t.Fatalf("Unmarshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(actual.Elem().Interface(), test.Out) {
+			t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, actual)
+		}
 	}
 }

@@ -11,28 +11,49 @@ import (
 )
 
 const (
-	stringerOut      = "stub"
-	textMarshalerOut = "stubtext"
+	stringerOut      = "stub"     // stringerOut is the output of fmt.Stringer implementations.
+	textMarshalerOut = "stubtext" // textMarshalerOut  is the output of encoding.TextMarshaler implementations.
 )
 
-type StubStringer struct{}
+var (
+	// mapMarshalerOut is the output of redmap.StringMapMarshaler implementations.
+	mapMarshalerOut = map[string]string{"field1": "value1", "field2": "value2"}
+)
 
-func (s StubStringer) String() string { return stringerOut }
+// stubStringer implements the fmt.Stringer interface.
+type stubStringer struct{}
 
-// StubIntStringer implements fmt.Stringer but doesn't rely on an
-// underlying struct. Useful to test whether we can detect
-// interfaces independently from their underlying type.
-type StubIntStringer int
+func (s stubStringer) String() string { return stringerOut }
 
-func (s StubIntStringer) String() string { return stringerOut }
+// stubIntStringer is an int that implements fmt.Stringer,
+// so that we can test if a non-struct type is correctly handled as an interface.
+type stubIntStringer int
 
-type StubTextMarshaler struct{}
+func (s stubIntStringer) String() string { return stringerOut }
 
-func (s StubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
+// stubTextMarshaler implements the encoding.TextMarshaler interface.
+type stubTextMarshaler struct{}
+
+func (s stubTextMarshaler) MarshalText() ([]byte, error) { return []byte(textMarshalerOut), nil }
+
+// stubMapMarshaler implements the redmap.StringMapMarshaler interface.
+type stubMapMarshaler struct{}
+
+func (s stubMapMarshaler) MarshalStringMap() (map[string]string, error) {
+	return mapMarshalerOut, nil
+}
+
+// stubIntMapMarshaler is an int that implements redmap.StringMapMarshaler,
+// so that we can test if a non-struct type is correctly handled as an interface.
+type stubIntMapMarshaler int
+
+func (s stubIntMapMarshaler) MarshalStringMap() (map[string]string, error) {
+	return mapMarshalerOut, nil
+}
 
 func TestMarshalValidType(t *testing.T) {
 	var (
-		stub StubStringer = StubStringer{}
+		stub stubStringer = stubStringer{}
 		ifac fmt.Stringer = stub
 	)
 	types := []interface{}{
@@ -50,7 +71,7 @@ func TestMarshalValidType(t *testing.T) {
 
 func TestMarshalNil(t *testing.T) {
 	var (
-		stub *StubStringer = nil
+		stub *stubStringer = nil
 		ifac fmt.Stringer  = stub
 	)
 	nils := []interface{}{nil, stub, ifac}
@@ -66,8 +87,8 @@ func TestMarshalInvalidType(t *testing.T) {
 	tests := []interface{}{noStruct, &noStruct}
 	for _, test := range tests {
 		_, err := redmap.Marshal(test)
-		if !errors.Is(err, redmap.ErrNotStruct) {
-			t.Fatalf("Unmarshal returned error %q but %q was expected", err, redmap.ErrNotStruct)
+		if !errors.Is(err, redmap.ErrNoCodec) {
+			t.Fatalf("Unmarshal returned error %q but %q was expected", err, redmap.ErrNoCodec)
 		}
 	}
 }
@@ -87,14 +108,14 @@ func TestMarshalScalars(t *testing.T) {
 		{In: struct{ V string }{"str"}, Out: map[string]string{"V": "str"}},
 
 		// // Marshal interfaces by passing the real value.
-		{In: struct{ V StubStringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V StubIntStringer }{StubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V StubTextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
+		{In: struct{ V stubStringer }{stubStringer{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V stubIntStringer }{stubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V stubTextMarshaler }{stubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 
 		// Marshal interfaces by interfaces.
-		{In: struct{ V fmt.Stringer }{StubStringer{}}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V fmt.Stringer }{StubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
-		{In: struct{ V encoding.TextMarshaler }{StubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
+		{In: struct{ V fmt.Stringer }{stubStringer{}}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V fmt.Stringer }{stubIntStringer(100)}, Out: map[string]string{"V": stringerOut}},
+		{In: struct{ V encoding.TextMarshaler }{stubTextMarshaler{}}, Out: map[string]string{"V": textMarshalerOut}},
 	}
 	for _, test := range tests {
 		out, err := redmap.Marshal(test.In)
@@ -181,6 +202,47 @@ func TestMarshalWithTags(t *testing.T) {
 		"DefaultName": "defaultname",
 		"customname":  "renamed",
 	}
+	out, err := redmap.Marshal(stru)
+	if err != nil {
+		t.Fatalf("Marshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("Marshal's output doesn't respect struct tags\n\tExpected: %v\n\tOut: %v", expected, out)
+	}
+}
+
+func TestMapMarshaler(t *testing.T) {
+	tests := []struct {
+		In  redmap.StringMapMarshaler
+		Out map[string]string
+	}{
+		{In: stubMapMarshaler{}, Out: mapMarshalerOut},
+		{In: stubIntMapMarshaler(666), Out: mapMarshalerOut},
+	}
+	for _, test := range tests {
+		out, err := redmap.Marshal(test.In)
+		if err != nil {
+			t.Fatalf("Marshal returned unexpected error %q", err)
+		}
+		if !reflect.DeepEqual(out, test.Out) {
+			t.Fatalf("Marshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, out)
+		}
+	}
+}
+
+func TestInnerMapMarshaler(t *testing.T) {
+	stru := struct {
+		RegularField string
+		Struct       stubMapMarshaler `redmap:",inline"`
+	}{
+		RegularField: "regular",
+		Struct:       stubMapMarshaler{},
+	}
+	expected := map[string]string{"RegularField": "regular"}
+	for k, v := range mapMarshalerOut {
+		expected["Struct."+k] = v
+	}
+
 	out, err := redmap.Marshal(stru)
 	if err != nil {
 		t.Fatalf("Marshal returned unexpected error %q", err)
