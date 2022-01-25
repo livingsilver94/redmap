@@ -52,7 +52,7 @@ type StringMapMarshaler interface {
 //   // are constructed in the "customName.subFieldName" format.
 //   Field int `redmap:"customName,inline"`
 func Marshal(v interface{}) (map[string]string, error) {
-	val, err := structValue(v)
+	val, err := validValue(v)
 	if err != nil {
 		return nil, err
 	}
@@ -60,24 +60,17 @@ func Marshal(v interface{}) (map[string]string, error) {
 	return ret, marshalRecursive(ret, "", val)
 }
 
-func structValue(v interface{}) (reflect.Value, error) {
+func validValue(v interface{}) (reflect.Value, error) {
 	val := reflect.ValueOf(v)
 	kin := val.Kind()
 	for kin == reflect.Interface || kin == reflect.Ptr {
 		val = val.Elem()
 		kin = val.Kind()
 	}
-	switch kin {
-	case reflect.Struct:
-		return val, nil
-	case reflect.Invalid:
+	if kin == reflect.Invalid {
 		return reflect.Value{}, ErrNilValue
-	default:
-		if !val.Type().Implements(mapMarshalerType) {
-			return reflect.Value{}, errIs(val.Type(), ErrNoCodec)
-		}
-		return val, nil
 	}
+	return val, nil
 }
 
 // marshalRecursive marshal a struct represented by val into a map[string]string.
@@ -88,6 +81,9 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 	typ := stru.Type()
 	if typ.Implements(mapMarshalerType) {
 		return structToMap(mp, prefix, stru)
+	}
+	if stru.Kind() != reflect.Struct {
+		return errIs(stru.Type(), ErrNoCodec)
 	}
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
@@ -110,9 +106,6 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 		}
 
 		if tags.inline {
-			if kind := value.Kind(); kind != reflect.Struct {
-				return fmt.Errorf("cannot inline: %w", errIs(value.Type(), ErrNoCodec))
-			}
 			err := marshalRecursive(mp, prefix+tags.name+inlineSep, value)
 			if err != nil {
 				return err
