@@ -285,12 +285,12 @@ func TestInnerMapUnmarshaler(t *testing.T) {
 				Struct       stubMapUnmarshaler `redmap:",inline"`
 			}{"regular", stubMapUnmarshaler{Field1: "value1", Field2: "value2"}},
 		},
-		// {In: map[string]string{"RegularField": "regular", "Inner.Field1": "666"},
-		// 	Out: struct {
-		// 		RegularField string
-		// 		Inner        stubIntMapUnmarshaler `redmap:",inline"`
-		// 	}{"regular", stubIntMapUnmarshaler(666)},
-		// },
+		{In: map[string]string{"RegularField": "regular", "Inner.Field1": "666"},
+			Out: struct {
+				RegularField string
+				Inner        stubIntMapUnmarshaler `redmap:",inline"`
+			}{"regular", stubIntMapUnmarshaler(666)},
+		},
 	}
 
 	for _, test := range tests {
