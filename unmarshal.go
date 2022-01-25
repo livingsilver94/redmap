@@ -18,8 +18,7 @@ type StringMapUnmarshaler interface {
 // v must be a pointer to struct or an interface. Neither data nor v can be nil.
 //
 // Unmarshal uses the inverse of the encodings that Marshal uses, so all the types supported
-// by it are also supported in Unmarshal, except the interfaces: only encoding.TextUnmarshaler
-// can be unmarshaled.
+// by it are also supported in Unmarshal, except fmt.Stringer which doesn't have an inverse.
 //
 // The decoding of each struct field can be customized by the format string documented in Marshal.
 func Unmarshal(data map[string]string, v interface{}) error {
