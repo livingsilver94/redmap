@@ -251,3 +251,21 @@ func TestInnerMapMarshaler(t *testing.T) {
 		t.Fatalf("Marshal's output doesn't respect struct tags\n\tExpected: %v\n\tOut: %v", expected, out)
 	}
 }
+
+func TestMarshalNilField(t *testing.T) {
+	stru := struct {
+		Field           *int
+		FieldOmit       *int `redmap:",omitempty"`
+		FieldDouble     **int
+		FieldOmitDouble **int `redmap:",omitempty"`
+	}{}
+	expected := map[string]string{"Field": "0", "FieldDouble": "0"}
+	out, err := redmap.Marshal(stru)
+	redmap.Marshal(stru)
+	if err != nil {
+		t.Fatalf("Marshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("Marshal's output doesn't respect struct tags\n\tExpected: %v\n\tOut: %v", expected, out)
+	}
+}

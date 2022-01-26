@@ -102,7 +102,7 @@ func marshalRecursive(mp map[string]string, prefix string, stru reflect.Value) e
 			tags.name = field.Name
 		}
 
-		for value.Kind() == reflect.Ptr {
+		for value.Kind() == reflect.Ptr && !value.IsNil() {
 			value = value.Elem()
 		}
 
@@ -134,6 +134,10 @@ func structToMap(mp map[string]string, prefix string, stru reflect.Value) error 
 }
 
 func fieldToString(val reflect.Value) (string, error) {
+	for val.Kind() == reflect.Ptr {
+		underlying := reflect.TypeOf(val.Interface()).Elem()
+		val = reflect.New(underlying).Elem()
+	}
 	typ := val.Type()
 	if typ.Implements(textMarshalerType) {
 		str, err := val.Interface().(encoding.TextMarshaler).MarshalText()
