@@ -211,7 +211,7 @@ func TestMarshalWithTags(t *testing.T) {
 	}
 }
 
-func TestMapMarshaler(t *testing.T) {
+func TestMarshalMapMarshaler(t *testing.T) {
 	tests := []struct {
 		In  redmap.StringMapMarshaler
 		Out map[string]string
@@ -230,7 +230,7 @@ func TestMapMarshaler(t *testing.T) {
 	}
 }
 
-func TestInnerMapMarshaler(t *testing.T) {
+func TestMarshalInnerMapMarshaler(t *testing.T) {
 	stru := struct {
 		RegularField string
 		Struct       stubMapMarshaler `redmap:",inline"`
@@ -244,6 +244,24 @@ func TestInnerMapMarshaler(t *testing.T) {
 	}
 
 	out, err := redmap.Marshal(stru)
+	if err != nil {
+		t.Fatalf("Marshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("Marshal's output doesn't respect struct tags\n\tExpected: %v\n\tOut: %v", expected, out)
+	}
+}
+
+func TestMarshalNilField(t *testing.T) {
+	stru := struct {
+		Field           *int
+		FieldOmit       *int `redmap:",omitempty"`
+		FieldDouble     **int
+		FieldOmitDouble **int `redmap:",omitempty"`
+	}{}
+	expected := map[string]string{"Field": "0", "FieldDouble": "0"}
+	out, err := redmap.Marshal(stru)
+	redmap.Marshal(stru)
 	if err != nil {
 		t.Fatalf("Marshal returned unexpected error %q", err)
 	}
