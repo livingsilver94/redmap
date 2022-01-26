@@ -99,14 +99,14 @@ func TestUnmarshalInvalidType(t *testing.T) {
 			val:    func() reflect.Value { return reflect.ValueOf(100) },
 			expErr: redmap.ErrNotPointer},
 		{
-			// Int is not a struct.
+			// Int is not a struct nor StringMapUnmarshaler.
 			val: func() reflect.Value {
 				v := 100
 				return reflect.ValueOf(&v)
 			},
 			expErr: redmap.ErrNoCodec},
 		{
-			// Interface is not a struct.
+			// Interface is not a struct nor StringMapUnmarshaler.
 			val: func() reflect.Value {
 				v := fmt.Stringer(stubStringer{})
 				return reflect.ValueOf(&v)
@@ -302,5 +302,33 @@ func TestUnmarshalInnerMapUnmarshaler(t *testing.T) {
 		if !reflect.DeepEqual(actual.Elem().Interface(), test.Out) {
 			t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", test.In, test.Out, actual)
 		}
+	}
+}
+
+func TestUnmarshalNilField(t *testing.T) {
+	var (
+		zero       = 0
+		zeroDouble = &zero
+	)
+	type stru struct {
+		Field           *int
+		FieldOmit       *int `redmap:",omitempty"`
+		FieldDouble     **int
+		FieldOmitDouble **int `redmap:",omitempty"`
+	}
+	expected := stru{
+		Field:           &zero,
+		FieldOmit:       nil,
+		FieldDouble:     &zeroDouble,
+		FieldOmitDouble: nil,
+	}
+	mp := map[string]string{"Field": "0", "FieldDouble": "0"}
+	var out stru
+	err := redmap.Unmarshal(mp, &out)
+	if err != nil {
+		t.Fatalf("Unmarshal returned unexpected error %q", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("Unmarshal's output doesn't match the expected value\n\tIn: %v\n\tExpected: %v\n\tOut: %v", mp, expected, out)
 	}
 }
