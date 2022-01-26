@@ -196,7 +196,7 @@ func TestUnmarshalInnerStructs(t *testing.T) {
 	}
 }
 
-func TestUnarshalUnexported(t *testing.T) {
+func TestUnmarshalUnexported(t *testing.T) {
 	mp := map[string]string{"Exp": "atest"}
 	tests := []struct {
 		Out interface{}
@@ -253,7 +253,7 @@ func TestUnmarshalWithTags(t *testing.T) {
 	}
 }
 
-func TestMapUnmarshaler(t *testing.T) {
+func TestUnmarshalMapUnmarshaler(t *testing.T) {
 	intUn := stubIntMapUnmarshaler(666)
 	tests := []struct {
 		In  map[string]string
@@ -274,7 +274,7 @@ func TestMapUnmarshaler(t *testing.T) {
 	}
 }
 
-func TestInnerMapUnmarshaler(t *testing.T) {
+func TestUnmarshalInnerMapUnmarshaler(t *testing.T) {
 	tests := []struct {
 		In  map[string]string
 		Out interface{}

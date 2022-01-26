@@ -211,7 +211,7 @@ func TestMarshalWithTags(t *testing.T) {
 	}
 }
 
-func TestMapMarshaler(t *testing.T) {
+func TestMarshalMapMarshaler(t *testing.T) {
 	tests := []struct {
 		In  redmap.StringMapMarshaler
 		Out map[string]string
@@ -230,7 +230,7 @@ func TestMapMarshaler(t *testing.T) {
 	}
 }
 
-func TestInnerMapMarshaler(t *testing.T) {
+func TestMarshalInnerMapMarshaler(t *testing.T) {
 	stru := struct {
 		RegularField string
 		Struct       stubMapMarshaler `redmap:",inline"`
