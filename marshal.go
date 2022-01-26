@@ -19,8 +19,11 @@ type StringMapMarshaler interface {
 // from its method along with the error value. When not, Marshal reads every exported field and translates it
 // into a (key, value) pair to be added to the resulting map. Interfaces or pointers to struct are also accepted.
 //
-// Marshal converts all fields of non-reference built-in types except arrays, plus
+// Marshal converts all fields with built-in types except arrays, functions and channels, plus
 // structs implementing encoding.TextMarshaler or fmt.Stringer, checked in this exact order.
+// If a field is a pointer to a supported type, the underlying type's value is marshaled.
+// If the pointer is nil, it is marshaled as it had the underlying type's zero value unless `omitempty`
+// is specified.
 //
 // The encoding of each struct field can be customized by the format string stored under the "redmap"
 // key in the struct field's tag. The format string gives the name of the field, possibly followed by
@@ -33,13 +36,13 @@ type StringMapMarshaler interface {
 //   // Field appears in the map as key "customName".
 //   Field int `redmap:"customName"`
 //
-//   // Field appears in the map as key "customName" and
-//   // the field is omitted from the map if its value
-//   // is empty as defined by the Go language.
+//   // Field appears in the map as key "customName" unless
+//   // it has the zero value as defined by the Go specifications.
+//   // In such case, the field is not added to the map.
 //   Field int `redmap:"customName,omitempty"`
 //
 //   // Field appears in the map as key "Field" (the default), but
-//   // the field is skipped if empty. Note the leading comma.
+//   // the field is skipped if zero. Note the leading comma.
 //   Field int `redmap:",omitempty"`
 //
 //   // Field is ignored by this package.
