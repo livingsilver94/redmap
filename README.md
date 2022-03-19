@@ -51,3 +51,7 @@ func main() {
 	fmt.Println(mySIsBack, err)
 }
 ```
+
+## Why "Redmap"?
+
+Although Redmap is a general-purpose library, it fits well the Redis use case, since this database stores everything as strings. Also, most IDE highlight strings in red 😀
